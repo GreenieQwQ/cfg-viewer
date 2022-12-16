@@ -13,3 +13,10 @@
     stroke: #ccc;
     stroke-width: 1.5px;
 }
+
+.node rect {
+	fill: none;
+	stroke: hsla(0, 100%, 0%, 0.2);
+	stroke-width: 1;
+	stroke-dasharray: 5;
+}
