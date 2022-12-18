@@ -38,6 +38,7 @@ function spaceTree(root, {
         node.hue = Math.floor(Math.random() * 360);
         node.data.content.head.name = node.data.content.head.name ? node.data.content.head.name : "jmp";
         node.data.content.asm = node.data.content.asm ? node.data.content.asm : [];
+        node.data.id = "" + node.data.id;
         nodeMap[node.data.id] = node;
     });
     // compute minSize of all nodes
@@ -66,9 +67,9 @@ function spaceTree(root, {
         .attr("font-family", "sans-serif")
         .attr("font-size", 10);
         // .attr('transform', `translate(${padding + transX} ${padding}) scale(${scale} ${scale})`);
-
+    
     // start with only one root node
-    collapse(root);
+    click(root);
     update(root);
     // click(root);
     // click(root);
@@ -95,7 +96,7 @@ function spaceTree(root, {
     function getNodeSize(node) {
         // console.log(node);
         const xscale = 5;
-        const yscale = 12;
+        const yscale = 10;
         function getAsmLength(asm) {
             return (asm.addr + asm.mnemonic + asm.operands).length;
         }
@@ -195,10 +196,10 @@ function spaceTree(root, {
                 if(node.children) {
                     node.children.forEach(child => {
                         if(child.doi_type != DOI_TYPE.LITTLE_CARE) {
-                            console.log("child link:", {
-                                source: node,
-                                target: child
-                            });
+                            // console.log("child link:", {
+                            //     source: node,
+                            //     target: child
+                            // });
                             links.push({
                                 source: node,
                                 target: child
@@ -220,7 +221,7 @@ function spaceTree(root, {
         function getNode(node) {
             if(!visited.has(node.data.id)) {
                 visited.add(node.data.id);
-                // if(node.doi_type != DOI_TYPE.LITTLE_CARE)
+                if(node.doi_type != DOI_TYPE.LITTLE_CARE)
                     nodes.push(node);
                 if(node.children) {
                     node.children.forEach(child => getNode(child));
@@ -247,48 +248,45 @@ function spaceTree(root, {
         // console.log("Links:");
         console.log("links:",links);
 
-        // const g = new dagre.graphlib.Graph()
-        //     .setGraph({ rankdir: "TB", marginx: 50, marginy: 50, ranksep: 55 })
-        //     .setDefaultEdgeLabel(() => ({}));
+        // dagre
+        const g = new dagre.graphlib.Graph()
+            .setGraph({ rankdir: "TB", marginx: 50, marginy: 50, ranksep: 55 })
+            .setDefaultEdgeLabel(() => ({}));
 
-        // nodes.forEach(d => {
-        //     g.setNode(d.data.id, { width: d.size[0], height: d.size[1] });
-        // });
+        nodes.forEach(d => {
+            g.setNode(d.data.id, { width: d.size[0], height: d.size[1] });
+        });
 
-        // links.forEach(d => {
-        //     g.setEdge(d.source.data.id, d.target.data.id);
-        // });
+        links.forEach(d => {
+            g.setEdge(d.source.data.id, d.target.data.id);
+        });
 
-        // dagre.layout(g);
-        // console.log(g);
+        dagre.layout(g);
+        console.log(g);
 
-        // const dagreNode = g.nodes()
-        // .map(d => {
-        //   const node = g.node(d);
-        //   const nodeData = nodes.find(n => n.data.id == d);
-        //   node.data = nodeData.data;
-        //   node.size = [nodeData.size[0], nodeData.size[1]];
-        //   node.doi_type = nodeData.doi_type;
-        //   return node;
-        // });
+        const dagreNode = g.nodes()
+        .map(d => {
+          const node = g.node(d);
+          const nodeData = nodes.find(n => n.data.id == d);
+          nodeData.x = node.x;
+          nodeData.y = node.y;
+          return nodeData;
+        });
 
-        // console.log(dagreNode);
-        // const rootDagreNode = dagreNode.find(n => n.data.id == root.data.id);
-        // console.log("rootDagre:", rootDagreNode);
-        // const boxPadding = {
-        //     side: minXSize(tree) * 0.1,
-        //     bottom: minYSize(tree) * 0.2,
-        // };
+        console.log(dagreNode);
+        const rootDagreNode = dagreNode.find(n => n.data.id == root.data.id);
+        console.log("dagreNode:", dagreNode);
+
 
         // Update the nodes…
-        let node = svg.selectAll("g.node")
-            .data(nodes, d => d.data.id);
-        
         // let node = svg.selectAll("g.node")
-        //     .data(dagreNode, d => d.data.id);
+        //     .data(nodes, d => d.data.id);
+        
+        let node = svg.selectAll("g.node")
+            .data(dagreNode, d => d.data.id);
 
         
-        // svg.attr("viewBox", [rootDagreNode.x - width / 2, rootDagreNode.y - 50, width, height]);
+        svg.attr("viewBox", [rootDagreNode.x - width / 2, rootDagreNode.y - 50, width, height]);
 
         /*
         /* ===== Node Processing =====
@@ -307,20 +305,7 @@ function spaceTree(root, {
         //     .attr("height", 1e-6)
         //     .attr("x", n => n.x - n.size[0] / 2)
         //     .attr("y", n => n.y);
-            // .attrs(n => {
-            //     const {x, y} = n;
-            //     const [width, height] = getNodeSize(n);
-            //     return {
-            //         'class': 'node',
-            //         rx: roundScale,
-            //         ry: roundScale,
-            //         x: x - width / 2,
-            //         y,
-            //         width,
-            //         height,
-            //     }
-            // })
-            // .style("fill", d => d._children ? "lightsteelblue" : "#fff");
+
         // inner rect
         const boxPadding = {
             side: 5,
@@ -351,7 +336,7 @@ function spaceTree(root, {
         // if(root.children)   // when sigleton, there is an error
         // nodeUpdate.attr("transform", d => `translate(${d.x},${d.y})`);
         
-        // update outer
+        /// update outer
         // nodeUpdate.select("rect")
         //     .attr("x", n => n.x - n.size[0] / 2)
         //     .attr("y", n => n.y)
@@ -361,10 +346,10 @@ function spaceTree(root, {
         nodeUpdate.select("g").select("rect")
         .attr("class", "inner-box")
         .attr("x", n => n.x - n.size[0] / 2 + boxPadding.side)
-        .attr("y", n => n.y)
+        .attr("y", n => n.y - n.size[1] / 2)
         .attr("width", n => n.size[0] - 2 * boxPadding.side)
         // .attr("height", n => n.size[1] - boxPadding.bottom )
-        .attr("height", n => n.size[1] / 2)
+        .attr("height", n => n.size[1])
         .style("fill", d => d._children ? `hsl(${d.hue}, 100%, 90%)` : "#fff");
 
         // note: for the biggest node, we need to slightly add x for better visualization
@@ -405,20 +390,40 @@ function spaceTree(root, {
         /*
         /* ===== Link Processing =====
         */
-        function simpleLink(d) {
-            return "M" + d.source.x + "," + d.source.y
-                + "Q" + (d.source.x + d.target.x) / 2 + "," + (d.source.y + d.target.y) / 2
-                + " " + d.target.x + "," + d.target.y;
-          }
 
         // Entering
+        const edges = g.edges()
+            .map(d => {
+                console.log("d:", d);
+                const edge = g.edge(d);
+                const edgeData = links.find(e => e.source.data.id == d.v && e.target.data.id == d.w);
+                console.log("edge:", edge);
+                console.log("edgeData:", edgeData);
+                edge.source = edgeData.source;
+                edge.target = edgeData.target;
+                return edge;
+            })
+        console.log("darge edges:", edges);
+
         let link = svg
             .selectAll("path.link")
-            .data(links, d => "" + d.source.data.id + "," +  d.target.data.id);
+            .data(edges, d => d.source.data.id + "," +  d.target.data.id);
+        
+        
 
-        // Add new links at source's old pos
+        // link.append('marker')
+        // .attr('id', 'arrow')
+        // .attr('viewBox', '0 -10 15 15')
+        // .attr('refX', 15)
+        // .attr('refY', 0)
+        // .attr('markerWidth', 15)
+        // .attr('markerHeight', 15)
+        // .attr('markerUnits', 'userSpaceOnUse') // disable the effect of stroke width on the arrow
+        // .attr('orient', 'auto');
+            // Add new links at source's old pos
         link.enter().insert("path", "g")
         .attr("class", "link")
+        // .attr('marker-end', 'url(#arrow)')
         .attr("d", d => {
             let o = {x: source.x0 ? source.x0 : 0, y: source.y0  ? source.y0 + source.size[1] : 0};
             return diagonal({source: o, target: o});
@@ -426,6 +431,11 @@ function spaceTree(root, {
 
         
         // Set links to their new pos.
+        let line = d3.svg.line()
+                    .x(d =>  { return d.x; })
+                    .y(d => { return d.y; })
+                    .interpolate("basis");
+
         link.transition()
             .duration(duration)
             .attr("d", d => {
@@ -433,26 +443,21 @@ function spaceTree(root, {
                 // let s = {x: d.source.x, y: d.source.y + d.source.size[1] - boxPadding.bottom};
                 
                 // console.log("s + t:", s, t);
-                if(isParent(d.source, d.target)) {
-                    let s = {x: d.source.x, y: d.source.y + d.source.size[1] / 2};
-                    let t = {x: d.target.x, y: d.target.y};
-                    return diagonal({source: s, target: t});
-                }
-                else { 
-                    const up =  d.source.y < d.target.y ? d.source : d.target;
-                    const down =  d.source.y >= d.target.y ? d.source : d.target;
-                    if(up.x > down.x) {
-                        // left
-                        let s = {x: d.source.x - d.source.size[0] / 2 + boxPadding.side, y: d.source.y + d.source.size[1] / 2};
-                        let t = {x: d.target.x - d.target.size[0] / 2 + boxPadding.side, y: d.target.y + d.target.size[1] / 2};
-                        return simpleLink({source: s, target: t});
-                    } else {
-                        // right
-                        let s = {x: d.source.x + d.source.size[0] / 2 - boxPadding.side, y: d.source.y + d.source.size[1] / 2};
-                        let t = {x: d.target.x + d.target.size[0] / 2 - boxPadding.side, y: d.target.y + d.target.size[1] / 2};
-                        return simpleLink({source: s, target: t});
-                    }
-                }
+                // if(isParent(d.source, d.target)) {
+                //     let s = {x: d.source.x, y: d.source.y + d.source.size[1] / 2};
+                //     let t = {x: d.target.x, y: d.target.y};
+                //     return diagonal({source: s, target: t});
+                // }
+                // else { 
+                    // let data = {
+                    //     x: d.points.map(p => p.x),
+                    //     y: d.points.map(p => p.y)
+                    // };
+                    // console.log("lineData:", data);
+                    // console.log("line:", line);
+                    // console.log("line(data):", line(data));
+                    return line(d.points);
+                // }
                     
             });
 
@@ -460,7 +465,7 @@ function spaceTree(root, {
         link.exit().transition()
             .duration(duration)
             .attr("d", d => {
-                let o = {x: source.x ? source.x : 0, y: source.y ? source.y + source.size[1] : 0};
+                let o = {x: source.x ? source.x : 0, y: source.y ? source.y + source.size[1] / 2 : 0};
                 return diagonal({source: o, target: o});
             })
             .remove();
