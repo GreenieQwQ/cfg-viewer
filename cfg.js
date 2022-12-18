@@ -1,5 +1,5 @@
 /*
-/* Cfg viewer V0.1
+/* Cfg viewer V0.2
 */
 
 d3.json('data/root.json', d => {
@@ -68,7 +68,7 @@ function spaceTree(root, {
         // .attr('transform', `translate(${padding + transX} ${padding}) scale(${scale} ${scale})`);
 
     // start with only one root node
-    
+    collapse(root);
     update(root);
     // click(root);
     // click(root);
@@ -171,7 +171,7 @@ function spaceTree(root, {
     function getLinkFromRoot(root, nodes) {
         // linK: {source: node, target: node}
         // only consider link in nodes
-        console.log(root);
+        // console.log(root);
         let validNode = new Set();
         nodes.forEach(n => validNode.add(n.data.id));
 
@@ -220,7 +220,8 @@ function spaceTree(root, {
         function getNode(node) {
             if(!visited.has(node.data.id)) {
                 visited.add(node.data.id);
-                nodes.push(node);
+                // if(node.doi_type != DOI_TYPE.LITTLE_CARE)
+                    nodes.push(node);
                 if(node.children) {
                     node.children.forEach(child => getNode(child));
                 }
@@ -229,18 +230,51 @@ function spaceTree(root, {
         return nodes;
     }
 
+    function isParent(nodeA, nodeB) {
+        return (nodeA.parent && nodeA.parent.data.id == nodeB.data.id) || (nodeB.parent && nodeB.parent.data.id == nodeA.data.id);
+    }
+
     function update(source) {
         // Compute the new tree layout.
         tree(root);
         let nodes = getNodesFromRoot(root);
-        console.log("Nodes:");
-        console.log(nodes);
-        console.log("Sizes:");
-        nodes.forEach(n => console.log(n.data.id, n.size));
+        console.log("nodes:", nodes);
+        // console.log("Nodes:");
+        // console.log(nodes);
+        // console.log("Sizes:");
+        // nodes.forEach(n => console.log(n.data.id, n.size));
         let links = getLinkFromRoot(root, nodes);
-        console.log("Links:");
-        console.log(links);
+        // console.log("Links:");
+        console.log("links:",links);
 
+        // const g = new dagre.graphlib.Graph()
+        //     .setGraph({ rankdir: "TB", marginx: 50, marginy: 50, ranksep: 55 })
+        //     .setDefaultEdgeLabel(() => ({}));
+
+        // nodes.forEach(d => {
+        //     g.setNode(d.data.id, { width: d.size[0], height: d.size[1] });
+        // });
+
+        // links.forEach(d => {
+        //     g.setEdge(d.source.data.id, d.target.data.id);
+        // });
+
+        // dagre.layout(g);
+        // console.log(g);
+
+        // const dagreNode = g.nodes()
+        // .map(d => {
+        //   const node = g.node(d);
+        //   const nodeData = nodes.find(n => n.data.id == d);
+        //   node.data = nodeData.data;
+        //   node.size = [nodeData.size[0], nodeData.size[1]];
+        //   node.doi_type = nodeData.doi_type;
+        //   return node;
+        // });
+
+        // console.log(dagreNode);
+        // const rootDagreNode = dagreNode.find(n => n.data.id == root.data.id);
+        // console.log("rootDagre:", rootDagreNode);
         // const boxPadding = {
         //     side: minXSize(tree) * 0.1,
         //     bottom: minYSize(tree) * 0.2,
@@ -249,6 +283,12 @@ function spaceTree(root, {
         // Update the nodes…
         let node = svg.selectAll("g.node")
             .data(nodes, d => d.data.id);
+        
+        // let node = svg.selectAll("g.node")
+        //     .data(dagreNode, d => d.data.id);
+
+        
+        // svg.attr("viewBox", [rootDagreNode.x - width / 2, rootDagreNode.y - 50, width, height]);
 
         /*
         /* ===== Node Processing =====
@@ -260,13 +300,13 @@ function spaceTree(root, {
             .on("click", click);
         
         // outer rect
-        nodeEnter.append("rect")
-            .attr("rx", roundScale)
-            .attr("ry", roundScale)
-            .attr("width", 1e-6)
-            .attr("height", 1e-6)
-            .attr("x", n => n.x - n.size[0] / 2)
-            .attr("y", n => n.y);
+        // nodeEnter.append("rect")
+        //     .attr("rx", roundScale)
+        //     .attr("ry", roundScale)
+        //     .attr("width", 1e-6)
+        //     .attr("height", 1e-6)
+        //     .attr("x", n => n.x - n.size[0] / 2)
+        //     .attr("y", n => n.y);
             // .attrs(n => {
             //     const {x, y} = n;
             //     const [width, height] = getNodeSize(n);
@@ -284,7 +324,7 @@ function spaceTree(root, {
         // inner rect
         const boxPadding = {
             side: 5,
-            bottom: 5
+            bottom: 15
         };
         nodeEnter.append("g").append("rect")
             .attr("rx", roundScale)
@@ -312,18 +352,19 @@ function spaceTree(root, {
         // nodeUpdate.attr("transform", d => `translate(${d.x},${d.y})`);
         
         // update outer
-        nodeUpdate.select("rect")
-            .attr("x", n => n.x - n.size[0] / 2)
-            .attr("y", n => n.y)
-            .attr("width", n => n.size[0])
-            .attr("height", n => n.size[1]);
+        // nodeUpdate.select("rect")
+        //     .attr("x", n => n.x - n.size[0] / 2)
+        //     .attr("y", n => n.y)
+        //     .attr("width", n => n.size[0])
+        //     .attr("height", n => n.size[1]);
         // update inner
         nodeUpdate.select("g").select("rect")
         .attr("class", "inner-box")
         .attr("x", n => n.x - n.size[0] / 2 + boxPadding.side)
         .attr("y", n => n.y)
         .attr("width", n => n.size[0] - 2 * boxPadding.side)
-        .attr("height", n => n.size[1] - boxPadding.bottom)
+        // .attr("height", n => n.size[1] - boxPadding.bottom )
+        .attr("height", n => n.size[1] / 2)
         .style("fill", d => d._children ? `hsl(${d.hue}, 100%, 90%)` : "#fff");
 
         // note: for the biggest node, we need to slightly add x for better visualization
@@ -364,6 +405,11 @@ function spaceTree(root, {
         /*
         /* ===== Link Processing =====
         */
+        function simpleLink(d) {
+            return "M" + d.source.x + "," + d.source.y
+                + "Q" + (d.source.x + d.target.x) / 2 + "," + (d.source.y + d.target.y) / 2
+                + " " + d.target.x + "," + d.target.y;
+          }
 
         // Entering
         let link = svg
@@ -378,15 +424,36 @@ function spaceTree(root, {
             return diagonal({source: o, target: o});
         });
 
+        
         // Set links to their new pos.
         link.transition()
             .duration(duration)
             .attr("d", d => {
-                console.log(d);
-                let s = {x: d.source.x, y: d.source.y + d.source.size[1] - boxPadding.bottom};
-                let t = {x: d.target.x, y: d.target.y};
-                console.log("s + t:", s, t);
-                return diagonal({source: s, target: t});
+                // console.log(d);
+                // let s = {x: d.source.x, y: d.source.y + d.source.size[1] - boxPadding.bottom};
+                
+                // console.log("s + t:", s, t);
+                if(isParent(d.source, d.target)) {
+                    let s = {x: d.source.x, y: d.source.y + d.source.size[1] / 2};
+                    let t = {x: d.target.x, y: d.target.y};
+                    return diagonal({source: s, target: t});
+                }
+                else { 
+                    const up =  d.source.y < d.target.y ? d.source : d.target;
+                    const down =  d.source.y >= d.target.y ? d.source : d.target;
+                    if(up.x > down.x) {
+                        // left
+                        let s = {x: d.source.x - d.source.size[0] / 2 + boxPadding.side, y: d.source.y + d.source.size[1] / 2};
+                        let t = {x: d.target.x - d.target.size[0] / 2 + boxPadding.side, y: d.target.y + d.target.size[1] / 2};
+                        return simpleLink({source: s, target: t});
+                    } else {
+                        // right
+                        let s = {x: d.source.x + d.source.size[0] / 2 - boxPadding.side, y: d.source.y + d.source.size[1] / 2};
+                        let t = {x: d.target.x + d.target.size[0] / 2 - boxPadding.side, y: d.target.y + d.target.size[1] / 2};
+                        return simpleLink({source: s, target: t});
+                    }
+                }
+                    
             });
 
         // Remove any links exiting.

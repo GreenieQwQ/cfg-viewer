@@ -14,6 +14,10 @@
     stroke-width: 1.5px;
 }
 
+.link:hover {
+	stroke: rgb(189, 20, 186);
+}
+
 .node rect {
 	fill: none;
 	stroke: hsla(0, 100%, 0%, 0.2);
