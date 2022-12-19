@@ -503,12 +503,14 @@ function spaceTree(nodes, {
         // .attr('orient', 'auto');
             // Add new links at source's old pos
         link.enter().insert("path", "g")
-            .attr("class", "link")
+            .attr("class", "link");
+
+            
             // .attr('marker-end', 'url(#arrow)')
-            .attr("d", d => {
-                let o = {x: d.source.x0 ? d.source.x0 : 0, y: d.source.y0  ? d.source.y0 + d.source.size[1] : 0};
-                return diagonal({source: o, target: o});
-            });
+            // .attr("d", d => {
+            //     let o = {x: d.source.x0 ? d.source.x0 : 0, y: d.source.y0  ? d.source.y0 + d.source.size[1] : 0};
+            //     return diagonal({source: o, target: o});
+            // });
 
         
         // Set links to their new pos.
@@ -520,6 +522,7 @@ function spaceTree(nodes, {
 
         link.transition()
             .duration(duration)
+            .delay(duration * 0.5)
             .attr("d", d => {
                 // console.log(d);
                 // let s = {x: d.source.x, y: d.source.y + d.source.size[1] - boxPadding.bottom};
@@ -545,11 +548,11 @@ function spaceTree(nodes, {
 
         // Remove any links exiting.
         link.exit().transition()
-            .duration(duration)
-            .attr("d", d => {
-                let o = {x: d.source.x ? d.source.x : 0, y: d.source.y ? d.source.y + d.source.size[1] / 2 : 0};
-                return diagonal({source: o, target: o});
-            })
+            // .duration(duration)
+            // .attr("d", d => {
+            //     let o = {x: d.source.x ? d.source.x : 0, y: d.source.y ? d.source.y + d.source.size[1] / 2 : 0};
+            //     return diagonal({source: o, target: o});
+            // })
             .remove();
 
         /*
