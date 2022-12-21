@@ -15,10 +15,13 @@ const DOI_TYPE = {
 }
 
 const TEXT_PADDING = {
-    HEAD_TOP: 15,
-    HEAD_HEIGHT: 20,
+    HEAD_TOP: 5,
+    HEAD_BOTTOM: 5,
+    HEAD_HEIGHT: 12,
+    CONTENT_TOP: 5,
+    CONTENT_BOTTOM: 5,
     CONTENT_LEFT: 10,
-    CONTENT_HEIGHT: 15,
+    CONTENT_HEIGHT: 12,
     TEXT_WIDTH: 6.5
 }
 
@@ -114,7 +117,15 @@ function getDescendants(nodes, node) {
     return descendants.map(Number);
 }
 
-function getNodeSize(node) {
+function getHeadlineCount(nodes, node) {
+    let count = 1;
+    node.container.forEach(id => {
+        count += getHeadlineCount(nodes, nodes[id]);
+    })
+    return count;
+}
+
+function getNodeSize(nodes, node) {
     function getAsmLength(asm) {
         return (asm.addr + asm.mnemonic + asm.operands).length;
     }
@@ -136,11 +147,13 @@ function getNodeSize(node) {
     
     
     let width = getTitleLength(node) * TEXT_PADDING.TEXT_WIDTH;
-    let height = TEXT_PADDING.HEAD_TOP + TEXT_PADDING.HEAD_HEIGHT;
+    let height = TEXT_PADDING.HEAD_TOP + getHeadlineCount(nodes, node) * TEXT_PADDING.HEAD_HEIGHT + TEXT_PADDING.HEAD_BOTTOM;
 
-    if (node.doi_type == DOI_TYPE.MOST_CARE)
-        height += + getAsmCount(node) * TEXT_PADDING.CONTENT_HEIGHT;
+    if (node.doi_type == DOI_TYPE.MOST_CARE) {
+        let content_lines = node.container.length == 0 ? getAsmCount(node) : 0;     // 是合并主节点的话，不绘制Content
+        height += + TEXT_PADDING.CONTENT_TOP + content_lines * TEXT_PADDING.CONTENT_HEIGHT + TEXT_PADDING.CONTENT_BOTTOM;
         width = Math.max(width, getLongestAsmLength(node) * TEXT_PADDING.TEXT_WIDTH);
+    };
 
     // if(node.doi_type == DOI_TYPE.MOST_CARE)
     //     result = [getLongestAsmLength(node) * TEXT_PADDING.TEXT_WIDTH, TEXT_PADDING.HEAD_HEIGHT + getAsmCount(node) * TEXT_PADDING.CONTENT_HEIGHT];  // full description
@@ -241,10 +254,10 @@ function spaceTree(nodes, {
         node.content.head.name = node.content.head.name ? node.content.head.name : "jmp";
         node.content.asm = node.content.asm ? node.content.asm : [];
         node.id = "" + node.id;
-        node.size = getNodeSize(node);
         node.owner = null;
         node.container = [];
         node.is_fold = false;
+        node.size = getNodeSize(nodes, node);
     })
 
     // compute minSize of all nodes
@@ -347,6 +360,11 @@ function spaceTree(nodes, {
     }
 
     function update(nodes) {
+        /* Node Update */
+        nodes.forEach(n => {
+            n.size = getNodeSize(nodes, n);
+        });
+
         let [dnodes, links] = getNodesAndLinks(nodes);
 
         /* Dagre Layout */
@@ -422,29 +440,52 @@ function spaceTree(nodes, {
             .attr("y2", n => n.y)
 
         // Text
-        nodeEnter.append("text")
-            .attr("text-anchor", "middle")
-            .attr("class", "head")
-            .style("fill-opacity", 0);
-
         nodeEnter.append("g")
-            .attr("class", "content")
+            .attr("class", "head");
+        
+        nodeEnter.append("g")
+            .attr("class", "content");
+
+        let headBinder = gnode.select("g.head")  // 不能对nodeEnter进行此操作，否则合并节点后由于没有新增节点，已有节点内部head和content的text数量不会变化
             .selectAll("text")
             .data(d => {
                 let data = [];
-                let index = 1;
+                function getContainerHead(n) {
+                    data.push({
+                        id: d.id,
+                        content: n.content.head.addr + " " + n.content.head.func_addr + " " + n.content.head.name
+                    });
+                    n.container.forEach(id => {
+                        getContainerHead(nodes[id]);
+                    })
+                }
+                getContainerHead(d);
+                return data;
+            })
+
+        headBinder.enter()
+            .append("text")
+            .attr("text-anchor", "middle")
+            .style("fill-opacity", 0);
+
+        let contentBinder = gnode.select("g.content")
+            .selectAll("text")
+            .data(d => {
+                if (d.container.length != 0) return [];
+
+                let data = [];
                 d.content.asm.forEach(asm => {
                     data.push({
                         id: d.id,
-                        line: index,
                         content: asm.addr + asm.mnemonic + asm.operands
                     });
-                    index += 1;
                 });
                 return data;
             })
-            .enter()
+
+        contentBinder.enter()
             .append("text")
+            .style("fill-opacity", 0);
         
         // use title to display doi
         // nodeEnter.append("title")
@@ -477,26 +518,34 @@ function spaceTree(nodes, {
             .attr("x1", n => n.x - n.size[0] / 2)
             .attr("y1", n => {
                 let startY = n.y - n.size[1] / 2;
-                return startY + TEXT_PADDING.HEAD_HEIGHT;
+                let head_lines = getHeadlineCount(nodes, n);
+                return startY + TEXT_PADDING.HEAD_TOP + head_lines * TEXT_PADDING.HEAD_HEIGHT + TEXT_PADDING.HEAD_BOTTOM;
             })
             .attr("x2", n => {
                 return n.x + n.size[0] / 2;
             })
             .attr("y2", n => {
                 let startY = n.y - n.size[1] / 2;
-                return startY + TEXT_PADDING.HEAD_HEIGHT;
+                let head_lines = getHeadlineCount(nodes, n);
+                return startY + TEXT_PADDING.HEAD_TOP + head_lines * TEXT_PADDING.HEAD_HEIGHT + TEXT_PADDING.HEAD_BOTTOM
             })
 
         // note: for the biggest node, we need to slightly add x for better visualization
-        nodeUpdate.select(".head")
+        nodeUpdate.select("g.head")
+            .selectAll("text")
+            .attr("x", d => {
+                let n = nodes[d.id];
+                return n.x;
+            })
+            .attr("y", (d, i) => {
+                let n = nodes[d.id];
+                let startY = n.y - n.size[1] / 2;
+                return startY + TEXT_PADDING.HEAD_TOP + (i + 1) * TEXT_PADDING.HEAD_HEIGHT;
+            })
             .text(d => {
-                return d.content.head.addr + " " + d.content.head.func_addr + " " + d.content.head.name;
+                return d.content;
             })
             .style("fill-opacity", d => d.doi_type != DOI_TYPE.LITTLE_CARE ? 1 : 0)
-            .attr("x", d => d.x)
-            .attr("y", d => {
-                return d.y - d.size[1] / 2 + TEXT_PADDING.HEAD_TOP; // TODO: 按照字体大小调整BIAS
-            })
             // .attr("transform", d => `translate(${d.y},${d.x})`)
             // .attr("dy", "0.32em")
             // .attr("x", d => {
@@ -511,20 +560,22 @@ function spaceTree(nodes, {
             // .attr("stroke", halo)
             // .attr("stroke-width", haloWidth);
         
-        nodeUpdate.select(".content")
+        nodeUpdate.select("g.content")
             .selectAll("text")
             .attr("x", d => {
                 let n = nodes[d.id];
                 let startX = n.x - n.size[0] / 2;
                 return startX + TEXT_PADDING.CONTENT_LEFT;
             })
-            .attr("y", d => {
+            .attr("y", (d, i) => {
                 let n = nodes[d.id];
                 let startY = n.y - n.size[1] / 2;
-                return startY + TEXT_PADDING.HEAD_HEIGHT + d.line * TEXT_PADDING.CONTENT_HEIGHT;
+                startY += TEXT_PADDING.HEAD_TOP + TEXT_PADDING.HEAD_HEIGHT + TEXT_PADDING.HEAD_BOTTOM;
+                startY += TEXT_PADDING.CONTENT_TOP + (i + 1) * TEXT_PADDING.CONTENT_HEIGHT;
+                return startY;
             })
-            .text(d => d.content);
-            // .style("fill-opacity", d => d.doi_type != DOI_TYPE.LITTLE_CARE ? 1 : 0)
+            .text(d => d.content)
+            .style("fill-opacity", d => d.doi_type != DOI_TYPE.LITTLE_CARE ? 1 : 0);
 
         // nodeUpdate.select("title")
         //     .text(d => "DOI: " + d.doi)
@@ -546,6 +597,12 @@ function spaceTree(nodes, {
 
         nodeExit.selectAll("text")
             .style("fill-opacity", 0);
+
+        headBinder.exit()
+            .remove();
+
+        contentBinder.exit()
+            .remove();
 
         /*
         /* ===== Link Processing =====

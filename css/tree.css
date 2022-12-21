@@ -9,10 +9,6 @@
 	stroke-width: 1.5px;
 }
 
-.node text {
-	font: 10px sans-serif;
-}
-
 .link {
     fill: none;
     stroke: #ccc;
@@ -36,11 +32,17 @@
 	stroke-dasharray: 5;
 }
 
+.node text {
+	font: 10px sans-serif;
+}
+
+/* .g text {
+	font: 11px sans-serif;
+} */
+
 .brush .extent {
 	fill-opacity: .125;
 	shape-rendering: crispEdges;
 }
 
-.head {
-	font-size: 10;
-}
+
