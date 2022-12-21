@@ -1,5 +1,10 @@
+.board {
+	margin-top: 0px;
+	margin-left: 0px;
+}
+
 .node circle {
-	fill: #999;
+	fill: rgb(106, 105, 105);
 	stroke: steelblue;
 	stroke-width: 1.5px;
 }
@@ -20,6 +25,12 @@
 
 .node rect {
 	fill: none;
+	stroke: hsla(0, 0%, 0%, 0.2);
+	stroke-width: 1;
+	stroke-dasharray: 5;
+}
+
+.node line {
 	stroke: hsla(0, 100%, 0%, 0.2);
 	stroke-width: 1;
 	stroke-dasharray: 5;
@@ -28,4 +39,8 @@
 .brush .extent {
 	fill-opacity: .125;
 	shape-rendering: crispEdges;
+}
+
+.head {
+	font-size: 10;
 }

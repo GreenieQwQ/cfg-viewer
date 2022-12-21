@@ -14,10 +14,20 @@ const DOI_TYPE = {
     DONT_CARE: 1 << 3
 }
 
-const boxPadding = {
-    side: 5,
-    bottom: 15
-};
+const TEXT_PADDING = {
+    HEAD_TOP: 15,
+    HEAD_HEIGHT: 20,
+    CONTENT_LEFT: 10,
+    CONTENT_HEIGHT: 15,
+    TEXT_WIDTH: 6.5
+}
+
+const NODE_COLOR = {
+    NORMAL: "#fff",
+    FOLD: `hsl(100, 100%, 90%)`,
+    MERGE: `hsl(200, 100%, 90%)`,
+    FOLD_AND_MERGE: `hsl(360, 100%, 90%)`
+}
 
 /* Nodes and Links Function*/
 function mergeNodes(nodes, merge_ids) {
@@ -105,9 +115,6 @@ function getDescendants(nodes, node) {
 }
 
 function getNodeSize(node) {
-    // console.log(node);
-    const xscale = 5;
-    const yscale = 10;
     function getAsmLength(asm) {
         return (asm.addr + asm.mnemonic + asm.operands).length;
     }
@@ -124,19 +131,25 @@ function getNodeSize(node) {
         return node.content.asm.length;
     }
     function getTitleLength(node) {
-        return node.content.head.name.length;
+        return (node.content.head.addr + node.content.head.func_addr + node.content.head.name).length;
     }
-    let result = [0, 0];
     
-    if(node.doi_type == DOI_TYPE.MOST_CARE)
-        result = [getLongestAsmLength(node) * xscale, Math.max(getAsmCount(node), 1) * yscale];  // full description
-    else if(node.doi_type == DOI_TYPE.MEDIEAN_CARE)
-        result = [getLongestAsmLength(node) * xscale, (getAsmCount(node) <= 1 ? 1 : 2) * yscale]; // display first and last asm / single put/jmp
-    else
-        result = [getTitleLength(node) * xscale, 1 * yscale];   // only titke is shown
-    // console.log(result);
-    // node.size = result;
-    return result;
+    
+    let width = getTitleLength(node) * TEXT_PADDING.TEXT_WIDTH;
+    let height = TEXT_PADDING.HEAD_TOP + TEXT_PADDING.HEAD_HEIGHT;
+
+    if (node.doi_type == DOI_TYPE.MOST_CARE)
+        height += + getAsmCount(node) * TEXT_PADDING.CONTENT_HEIGHT;
+        width = Math.max(width, getLongestAsmLength(node) * TEXT_PADDING.TEXT_WIDTH);
+
+    // if(node.doi_type == DOI_TYPE.MOST_CARE)
+    //     result = [getLongestAsmLength(node) * TEXT_PADDING.TEXT_WIDTH, TEXT_PADDING.HEAD_HEIGHT + getAsmCount(node) * TEXT_PADDING.CONTENT_HEIGHT];  // full description
+    // else if(node.doi_type == DOI_TYPE.MEDIEAN_CARE)
+    //     result = [getLongestAsmLength(node) * xscale, (getAsmCount(node) <= 1 ? 1 : 2) * yscale]; // display first and last asm / single put/jmp
+    // else
+    //     result = [getTitleLength(node) * xscale, 1 * yscale];   // only titke is shown
+
+    return [width, height];
 }
 
 /* Outdated Function */
@@ -206,8 +219,8 @@ function getNodesFromRoot(root) {
 
 /* Main */
 function spaceTree(nodes, {
-    width = 1024, // outer width, in pixels
-    height = 2048, // outer height, in pixels
+    width = 2048, // outer width, in pixels
+    height = 4096, // outer height, in pixels
     margin = 100, // shorthand for margins
     marginTop = margin, // top margin, in pixels
     marginLeft = margin, // left margin, in pixels
@@ -216,9 +229,6 @@ function spaceTree(nodes, {
 } = {})
 {
     let diagonal = d3.svg.diagonal();
-    // let diagonal = d3.linkHorizontal()
-        // .x(d => d.x)
-        // .y(d => d.y)
 
     /* Compute DOI(temp) */
     nodes.forEach(node => {
@@ -228,7 +238,6 @@ function spaceTree(nodes, {
 
     /* Data Supplement */
     nodes.forEach(node => {
-        node.hue = Math.floor(Math.random() * 360);
         node.content.head.name = node.content.head.name ? node.content.head.name : "jmp";
         node.content.asm = node.content.asm ? node.content.asm : [];
         node.id = "" + node.id;
@@ -243,10 +252,6 @@ function spaceTree(nodes, {
     // (min, node) => Math.min(min, getNodeSize(node)[xy]), Infinity);
     // const minXSize = minSize(0);
     // const minYSize = minSize(1);
-    // const boxPadding = {
-    //     side: minXSize(tree) * 0.1,
-    //     bottom: minYSize(tree) * 0.2,
-    //   };
     // console.log(minXSize);
     // console.log(minYSize);
     // tree(root);
@@ -257,14 +262,29 @@ function spaceTree(nodes, {
 
     // Center the tree.
     let svg = d3.select("body").append("svg")
-        // .attr("viewBox", [extents.left - width / 2, extents.top - padding, width, height])
         .attr("width", width)
         .attr("height", height)
         .attr("style", "max-width: 100%; height: auto; height: intrinsic;")
         .attr("font-family", "sans-serif")
-        .attr("font-size", 10);
+        .attr("font-size", 10)
+        .attr("class", "board")
         // .attr('transform', `translate(${padding + transX} ${padding}) scale(${scale} ${scale})`);
     
+    /* Marker */
+    // Arrow
+    let marker = svg.append("defs").append("marker")
+        .attr("id", "arrow")
+        .attr("markerUnits", "strokeWidth")
+        .attr("markerWidth", 5)
+        .attr("markerHeight", 4)
+        .attr("refX", 5)
+        .attr("refY", 2)
+        .attr("orient", "auto");
+
+    marker.append("path")
+        .attr("d", "M 0 0 L 5 2 L 0 4 z")
+        .attr("fill", "#707070");
+
     /* Brush */
     var xScale = d3.scale.linear().domain([0, width]).range([0, width]);
     var yScale = d3.scale.linear().domain([0, height]).range([0, height]);
@@ -280,24 +300,10 @@ function spaceTree(nodes, {
         .attr("class", "brush")
         .call(brush);
 
-    // var arc = d3.svg.arc()
-    //     .outerRadius(height / 2)
-    //     .startAngle(0)
-    //     .endAngle(function(d, i) { return i ? -Math.PI : Math.PI; })
-
-    // brushg.selectAll(".resize").append("path")
-    //     .attr("transform", "translate(0," + height / 2 + ")")
-    //     .attr("d", arc)
-
-    // brushg.selectAll("rect")
-    //     .attr("height", height);
-
     /* Test */
     update(nodes);
-    // click(root);
-    // click(root);
-    // console.log(root);
-    // console.log(tree.hierarchy(root));
+    
+    
     /* 
     /*   ==== function definitions ==== 
     */
@@ -366,8 +372,26 @@ function spaceTree(nodes, {
             return node;
         });
         
-        // set viewBox according to root node
-        svg.attr("viewBox", [dagreNodes[0].x - width / 2, dagreNodes[0].y - 50, width, height]);
+        /* View Box(Auto Layout for svy) */
+        let viewX = Infinity;  // 所有节点最左侧的X坐标
+        let viewY = Infinity;  // 所有节点最顶部的Y坐标
+        let viewW = 0;  // 给定最左侧X坐标时，所有节点最右侧坐标到X的距离
+        let viewH = 0;  // 同理
+
+        dagreNodes.forEach(n => {
+            viewX = Math.min(viewX, n.x - n.size[0] / 2);
+            viewY = Math.min(viewY, n.y - n.size[1] / 2);
+        })
+        dagreNodes.forEach(n => {
+            viewW = Math.max(viewW, n.x + n.size[0] / 2);
+            viewH = Math.max(viewH, n.y + n.size[1] / 2);
+        })
+        // console.log(viewX, viewY, viewW, viewH);
+        // svg.attr("width", viewW);
+        // svg.attr("height", viewH);
+        // svg.attr("viewBox", [viewX, viewY, viewW, viewH]);
+        // svg.attr("viewBox", [dagreNodes[0].x - width / 2, dagreNodes[0].y - 50, width, height]);
+        // TODO: Wait Implementation
 
         /*
         /* ===== Node Processing =====
@@ -381,62 +405,98 @@ function spaceTree(nodes, {
             .attr("class", "node")
             .on("click", click)
             .on("dblclick", dblclick);
-        
-        // outer rect
-        // nodeEnter.append("rect")
-        //     .attr("rx", roundScale)
-        //     .attr("ry", roundScale)
-        //     .attr("width", 1e-6)
-        //     .attr("height", 1e-6)
-        //     .attr("x", n => n.x - n.size[0] / 2)
-        //     .attr("y", n => n.y);
 
-        // inner rect
         nodeEnter.append("g").append("rect")
             .attr("rx", roundScale)
             .attr("ry", roundScale)
-            .attr("width", 1e-6)
-            .attr("height", 1e-6)
-            .attr("x", n => n.x - n.size[0] / 2 + boxPadding.side)
+            .attr("width", 0)
+            .attr("height", 0)
+            .attr("x", n => n.x)
             .attr("y", n => n.y)
-            .style("fill", d => d._children ? "lightsteelblue" : "#fff");
+            .style("fill", d => d.is_fold ? "lightsteelblue" : "#fff");
 
+        nodeEnter.select("g").append("line")
+            .attr("x1", n => n.x)
+            .attr("y1", n => n.y)
+            .attr("x2", n => n.x)
+            .attr("y2", n => n.y)
+
+        // Text
         nodeEnter.append("text")
-            .attr("text-anchor", "start")
-            .style("fill-opacity", 1e-6);
+            .attr("text-anchor", "middle")
+            .attr("class", "head")
+            .style("fill-opacity", 0);
+
+        nodeEnter.append("g")
+            .attr("class", "content")
+            .selectAll("text")
+            .data(d => {
+                let data = [];
+                let index = 1;
+                d.content.asm.forEach(asm => {
+                    data.push({
+                        id: d.id,
+                        line: index,
+                        content: asm.addr + asm.mnemonic + asm.operands
+                    });
+                    index += 1;
+                });
+                return data;
+            })
+            .enter()
+            .append("text")
         
         // use title to display doi
-        nodeEnter.append("title")
-            .text(d => "DOI: " + d.doi)
+        // nodeEnter.append("title")
+        //     .text(d => "DOI: " + d.doi)
 
         // Updating: from origin pos to new pos
         // note: 3 levels of visualizing according to node's doi
         let nodeUpdate = gnode.transition()
             .duration(duration);
-
-        // if(root.children)   // when sigleton, there is an error
-        // nodeUpdate.attr("transform", d => `translate(${d.x},${d.y})`);
         
-        /// update outer
-        // nodeUpdate.select("rect")
-        //     .attr("x", n => n.x - n.size[0] / 2)
-        //     .attr("y", n => n.y)
-        //     .attr("width", n => n.size[0])
-        //     .attr("height", n => n.size[1]);
-        // update inner
         nodeUpdate.select("g").select("rect")
-        .attr("class", "inner-box")
-        .attr("x", n => n.x - n.size[0] / 2 + boxPadding.side)
-        .attr("y", n => n.y - n.size[1] / 2)
-        .attr("width", n => n.size[0] - 2 * boxPadding.side)
-        // .attr("height", n => n.size[1] - boxPadding.bottom )
-        .attr("height", n => n.size[1])
-        .style("fill", d => d._children ? `hsl(${d.hue}, 100%, 90%)` : "#fff");
+            .attr("class", "inner-box")
+            .attr("x", n => n.x - n.size[0] / 2)
+            .attr("y", n => n.y - n.size[1] / 2)
+            .attr("width", n => n.size[0])
+            .attr("height", n => n.size[1])
+            .style("fill", d => {
+                if (!d.is_fold && d.container.length == 0) {
+                    return NODE_COLOR.NORMAL;
+                } else if (d.is_fold && d.container.length == 0) {
+                    return NODE_COLOR.FOLD;
+                } else if (!d.is_fold && d.container.length != 0) {
+                    return NODE_COLOR.MERGE;
+                } else {
+                    return NODE_COLOR.FOLD_AND_MERGE;
+                }
+            });
+
+        nodeUpdate.select("g").select("line")
+            .attr("x1", n => n.x - n.size[0] / 2)
+            .attr("y1", n => {
+                let startY = n.y - n.size[1] / 2;
+                return startY + TEXT_PADDING.HEAD_HEIGHT;
+            })
+            .attr("x2", n => {
+                return n.x + n.size[0] / 2;
+            })
+            .attr("y2", n => {
+                let startY = n.y - n.size[1] / 2;
+                return startY + TEXT_PADDING.HEAD_HEIGHT;
+            })
 
         // note: for the biggest node, we need to slightly add x for better visualization
-        nodeUpdate.select("text")
-            .text(d => d.content.head.name)
-            .style("fill-opacity", d => d.doi_type != DOI_TYPE.LITTLE_CARE ? 1 : 1e-6)
+        nodeUpdate.select(".head")
+            .text(d => {
+                return d.content.head.addr + " " + d.content.head.func_addr + " " + d.content.head.name;
+            })
+            .style("fill-opacity", d => d.doi_type != DOI_TYPE.LITTLE_CARE ? 1 : 0)
+            .attr("x", d => d.x)
+            .attr("y", d => {
+                return d.y - d.size[1] / 2 + TEXT_PADDING.HEAD_TOP; // TODO: 按照字体大小调整BIAS
+            })
             // .attr("transform", d => `translate(${d.y},${d.x})`)
             // .attr("dy", "0.32em")
             // .attr("x", d => {
@@ -445,28 +505,47 @@ function spaceTree(nodes, {
             //     else 
             //         return (d => d.children) ? -10 : 10;
             // })
-            .attr("x", n => n.x - n.size[0] / 2)
-            .attr("y", n => n.y);
             // .attr("text-anchor", d => d.children ? "end" : "start");
             // Better presentation yet with low efficiency -- draw much lags
             // .attr("paint-order", "stroke")
             // .attr("stroke", halo)
             // .attr("stroke-width", haloWidth);
         
-        nodeUpdate.select("title")
-            .text(d => "DOI: " + d.doi)
+        nodeUpdate.select(".content")
+            .selectAll("text")
+            .attr("x", d => {
+                let n = nodes[d.id];
+                let startX = n.x - n.size[0] / 2;
+                return startX + TEXT_PADDING.CONTENT_LEFT;
+            })
+            .attr("y", d => {
+                let n = nodes[d.id];
+                let startY = n.y - n.size[1] / 2;
+                return startY + TEXT_PADDING.HEAD_HEIGHT + d.line * TEXT_PADDING.CONTENT_HEIGHT;
+            })
+            .text(d => d.content);
+            // .style("fill-opacity", d => d.doi_type != DOI_TYPE.LITTLE_CARE ? 1 : 0)
+
+        // nodeUpdate.select("title")
+        //     .text(d => "DOI: " + d.doi)
             
         // Exiting
         let nodeExit = gnode.exit().transition()
             .duration(duration)
             .remove();
 
-        nodeExit.select("rect")
-            .attr("width", 1e-6)
-            .attr("height", 1e-6);
+        nodeExit.selectAll("rect")
+            .attr("width", 0)
+            .attr("height", 0);
 
-        nodeExit.select("text")
-            .style("fill-opacity", 1e-6);
+        nodeExit.selectAll("line")
+            .attr("x1", n => n.x)
+            .attr("y1", n => n.y)
+            .attr("x2", n => n.x)
+            .attr("y2", n => n.y);
+
+        nodeExit.selectAll("text")
+            .style("fill-opacity", 0);
 
         /*
         /* ===== Link Processing =====
@@ -475,22 +554,16 @@ function spaceTree(nodes, {
         // Entering
         const edges = g.edges()
             .map(d => {
-                // console.log("d:", d);
                 const dedge = g.edge(d);
                 const edge = links.find(e => e.source == d.v && e.target == d.w);
-                // console.log("edge:", dedge);
-                // console.log("edgeData:", edge);
                 dedge.source = edge.source;
                 dedge.target = edge.target;
                 return dedge;
             })
-        // console.log("darge edges:", edges);
 
         let link = svg
             .selectAll("path.link")
             .data(edges, d => d.source + "," +  d.target);
-        
-        
 
         // link.append('marker')
         // .attr('id', 'arrow')
@@ -505,19 +578,16 @@ function spaceTree(nodes, {
         link.enter().insert("path", "g")
             .attr("class", "link");
 
-            
             // .attr('marker-end', 'url(#arrow)')
             // .attr("d", d => {
             //     let o = {x: d.source.x0 ? d.source.x0 : 0, y: d.source.y0  ? d.source.y0 + d.source.size[1] : 0};
             //     return diagonal({source: o, target: o});
             // });
-
         
         // Set links to their new pos.
         let line = d3.svg.line()
                     .x(d => d.x)
                     .y(d => d.y)
-                    // .curve(d3.curveLinear);
                     .interpolate("basis");
 
         link.transition()
@@ -525,7 +595,7 @@ function spaceTree(nodes, {
             .delay(duration * 0.5)
             .attr("d", d => {
                 // console.log(d);
-                // let s = {x: d.source.x, y: d.source.y + d.source.size[1] - boxPadding.bottom};
+                // let s = {x: d.source.x, y: d.source.y + d.source.size[1]};
                 
                 // console.log("s + t:", s, t);
                 // if(isParent(d.source, d.target)) {
@@ -542,9 +612,9 @@ function spaceTree(nodes, {
                     // console.log("line:", line);
                     // console.log("line(data):", line(data));
                     return line(d.points);
-                // }
-                    
-            });
+                // }  
+            })
+            .attr("style", "marker-end: url(#arrow);");
 
         // Remove any links exiting.
         link.exit().transition()
@@ -595,9 +665,9 @@ function spaceTree(nodes, {
         let selectedNodes = [];
         let [dnodes, links] = getNodesAndLinks(nodes);
         dnodes.forEach(n => {
-            let x1 = n.x - n.size[0] / 2 + boxPadding.side;
+            let x1 = n.x - n.size[0] / 2;
             let y1 = n.y - n.size[1] / 2;
-            let x2 = x1 + n.size[0] - 2 * boxPadding.side;
+            let x2 = x1 + n.size[0];
             let y2 = y1 + n.size[1];
             if (isNodeInBox(x1, y1, extent) && isNodeInBox(x2, y2, extent))
                 selectedNodes.push(n.id);
