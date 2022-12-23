@@ -34,15 +34,18 @@
 
 .node text {
 	font: 10px sans-serif;
+	user-select: none;
 }
-
-/* .g text {
-	font: 11px sans-serif;
-} */
 
 .brush .extent {
 	fill-opacity: .125;
 	shape-rendering: crispEdges;
 }
 
-
+.textboard {
+	position: absolute;
+	/* top: 100px;
+	left: 200px; */
+	width: 100%;
+	height: 100%;
+}

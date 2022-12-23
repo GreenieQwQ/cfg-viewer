@@ -15,7 +15,7 @@ const DOI_TYPE = {
 }
 
 const TEXT_PADDING = {
-    HEAD_TOP: 5,
+    HEAD_TOP: 1,
     HEAD_BOTTOM: 5,
     HEAD_HEIGHT: 12,
     CONTENT_TOP: 5,
@@ -251,113 +251,14 @@ function getNodeSize(nodes, node) {
     if(content.length)
         height += TEXT_PADDING.CONTENT_TOP + content.length * TEXT_PADDING.CONTENT_HEIGHT + TEXT_PADDING.CONTENT_BOTTOM;
     return [width, height]
-    
-    // function getAsmLength(asm) {
-    //     return (asm.addr + asm.mnemonic + asm.operands).length;
-    // }
-    // function getLongestAsmLength(node) {
-    //     if(getAsmCount(node) == 0)  // only puts
-    //         return getTitleLength(node);
-
-    //     function getLongerAsm(asma, asmb) {
-    //         return getAsmLength(asma) > getAsmLength(asmb) ? asma : asmb;
-    //     }
-    //     return getAsmLength(node.content.asm.reduce(getLongerAsm, {addr: "", mnemonic: "", operands: ""}));
-    // }
-    // function getAsmCount(node) {
-    //     return node.content.asm.length;
-    // }
-    // function getTitleLength(node) {
-    //     return (node.content.head.addr + node.content.head.func_addr + node.content.head.name).length;
-    // }
-    
-    
-    // let width = getTitleLength(node) * TEXT_PADDING.TEXT_WIDTH;
-    // let height = TEXT_PADDING.HEAD_TOP + getHeadlineCount(nodes, node) * TEXT_PADDING.HEAD_HEIGHT + TEXT_PADDING.HEAD_BOTTOM;
-
-    // if (node.doi_type == DOI_TYPE.MOST_CARE) {
-    //     let content_lines = node.container.length == 0 ? getAsmCount(node) : 0;     // 是合并主节点的话，不绘制Content；container为0代表不是合并的节点
-    //     height += + TEXT_PADDING.CONTENT_TOP + content_lines * TEXT_PADDING.CONTENT_HEIGHT + TEXT_PADDING.CONTENT_BOTTOM;
-    //     width = Math.max(width, getLongestAsmLength(node) * TEXT_PADDING.TEXT_WIDTH);
-    // };
-
-    // if(node.doi_type == DOI_TYPE.MOST_CARE)
-    //     result = [getLongestAsmLength(node) * TEXT_PADDING.TEXT_WIDTH, TEXT_PADDING.HEAD_HEIGHT + getAsmCount(node) * TEXT_PADDING.CONTENT_HEIGHT];  // full description
-    // else if(node.doi_type == DOI_TYPE.MEDIEAN_CARE)
-    //     result = [getLongestAsmLength(node) * xscale, (getAsmCount(node) <= 1 ? 1 : 2) * yscale]; // display first and last asm / single put/jmp
-    // else
-    //     result = [getTitleLength(node) * xscale, 1 * yscale];   // only titke is shown
-
-    // return [width, height];
 }
 
-/* Outdated Function */
-// function getLinkFromRoot(root, nodes) {
-//     // linK: {source: node, target: node}
-//     // only consider link in nodes
-//     // console.log(root);
-//     let validNode = new Set();
-//     nodes.forEach(n => validNode.add(n.data.id));
 
-//     let visited = new Set();
-//     let links = [];
-//     getLink(root);
-//     function getLink(node) {
-//         if(!visited.has(node.data.id)) {
-//             visited.add(node.data.id);
-//             // add edge
-//             for(let i = 0; i < node.data.edge.length; ++i) {
-//                 // IMPORTANT: we only consider edge from node of interest and in nodes
-//                 let target = nodeMap[node.data.edge[i]];
-//                 if(target.doi_type != DOI_TYPE.LITTLE_CARE && validNode.has(target.data.id))
-//                     links.push({
-//                         source: node,
-//                         target
-//                     });
-//             }
-//             // add child link
-//             if(node.children) {
-//                 node.children.forEach(child => {
-//                     if(child.doi_type != DOI_TYPE.LITTLE_CARE) {
-//                         // console.log("child link:", {
-//                         //     source: node,
-//                         //     target: child
-//                         // });
-//                         links.push({
-//                             source: node,
-//                             target: child
-//                         });
-//                         getLink(child);
-//                     }
-//                 });
-//             }
-//         }
-//     }
-//     console.log("Link")
-//     console.log(links)
-//     return links;
-// }
+var clearFocus = null;
+var allFocus = null;
+var textUpdate = null;
+var selectedNode = null;
 
-// function getNodesFromRoot(root) {
-//     // linK: {source: node, target: node}
-//     let visited = new Set();
-//     let nodes = [];
-//     getNode(root);
-//     function getNode(node) {
-//         if(!visited.has(node.data.id)) {
-//             visited.add(node.data.id);
-//             if(node.doi_type != DOI_TYPE.LITTLE_CARE)
-//                 nodes.push(node);
-//             if(node.children) {
-//                 node.children.forEach(child => getNode(child));
-//             }
-//         }
-//     }
-//     return nodes;
-// }
-
-let clearFocus = null;
-let allFocus = null;
 
 /* Main */
 function spaceTree(nodes, {
@@ -380,6 +281,12 @@ function spaceTree(nodes, {
         update(nodes);
     };
 
+    // 设置文本框触发函数
+    textUpdate = () => {
+        let text = d3.select(".textboard").select("textarea").node().value;
+        nodes[selectedNode].note = text;
+    }
+
     /* Data Supplement */
     nodes.forEach(node => {
         node.content.head.name = node.content.head.name ? node.content.head.name : "jmp";
@@ -392,6 +299,7 @@ function spaceTree(nodes, {
         node.text = getNodeText(nodes, node);
         node.size = getNodeSize(nodes, node);
         node.shortestPathParent = null;
+        node.note = "";
     });
 
 
@@ -442,47 +350,6 @@ function spaceTree(nodes, {
     /* 
     /*   ==== function definitions ==== 
     */
-    // function setDOI(node)
-    // {
-        
-
-
-    //     let visited = new Set();
-        
-    //     function DOIHelper(node, distance)
-    //     {
-    //         if(visited.has(node.id))
-    //             return;
-
-    //         visited.add(node.id);
-    //         node.doi = -node.depth - distance;
-    //         if(node.doi == source.doi)
-    //             node.doi_type = DOI_TYPE.MOST_CARE;
-    //         else if(node.doi == source.doi - 2)
-    //             node.doi_type = DOI_TYPE.MEDIEAN_CARE;
-    //         else
-    //             node.doi_type = DOI_TYPE.LITTLE_CARE;
-            
-    //         if(node.children)
-    //         {
-    //             node.children.forEach(n => {
-    //                 DOIHelper(n, distance + 1);
-    //             });
-    //         } else if(node._children) {
-    //             // compute all children
-    //             node._children.forEach(n => {
-    //                 DOIHelper(n, distance + 1);
-    //             });
-    //         }
-
-    //         if(node.parent)
-    //             DOIHelper(node.parent, distance + 1);
-            
-    //     }
-
-    //     DOIHelper(source, 0);
-    // }
-
     function update(nodes) {
         /* Node Update */
         nodes.forEach(n => {
@@ -587,10 +454,6 @@ function spaceTree(nodes, {
         contentBinder.enter()
             .append("text")
             .style("fill-opacity", 0);
-        
-        // use title to display doi
-        // nodeEnter.append("title")
-        //     .text(d => "DOI: " + d.doi)
 
         // Updating: from origin pos to new pos
         // note: 3 levels of visualizing according to node's doi
@@ -637,6 +500,7 @@ function spaceTree(nodes, {
                 let head_lines = n.text[0].length;
                 return startY + TEXT_PADDING.HEAD_TOP + head_lines * TEXT_PADDING.HEAD_HEIGHT + TEXT_PADDING.HEAD_BOTTOM
             })
+            .style("visibility", n => n.text[1].length == 0 ? "hidden" : "visible");
 
         // note: for the biggest node, we need to slightly add x for better visualization
         nodeUpdate.select("g.head")
@@ -674,9 +538,6 @@ function spaceTree(nodes, {
             .style("fill-opacity", 1);
             // .style("fill-opacity", d => d.doi_type != DOI_TYPE.LITTLE_CARE ? 1 : 0);
 
-        // nodeUpdate.select("title")
-        //     .text(d => "DOI: " + d.doi)
-            
         // Exiting
         let nodeExit = gnode.exit().transition()
             .duration(duration)
@@ -747,11 +608,7 @@ function spaceTree(nodes, {
         link.transition()
             .duration(duration)
             .delay(duration * 0.5)
-            .attr("d", d => {
-
-                    return line(d.points);
-                // }  
-            })
+            .attr("d", d => line(d.points))
             .attr("style", "marker-end: url(#arrow);");
 
         // Remove any links exiting.
@@ -762,6 +619,23 @@ function spaceTree(nodes, {
             //     return diagonal({source: o, target: o});
             // })
             .remove();
+
+        /*
+        /* ===== TextArea =====
+        */
+        let node = nodes[selectedNode == null ? 0 : selectedNode];
+        
+        let textboard = d3.select(".textboard")
+            .style("top", (node.y - node.size[1] / 2 + 30) + "px")
+            .style("left", (node.x + node.size[0] / 2 + 9) + "px")
+            .style("visibility", selectedNode == null ? "hidden" : "visible");
+        
+        let textarea = textboard.select("textarea")
+            .attr("cols", node.size[0] / 8)
+            .attr("rows", node.size[1] / 15)
+            .style("visibility", selectedNode == null ? "hidden" : "visible");
+
+        textarea.node().value = node.note;
 
         /*
         /* ===== Post processing =====
@@ -778,28 +652,25 @@ function spaceTree(nodes, {
 
     // collapse/unfold one layer on click, and compute doi then update.
     function click(n) {
-        if(d3.event.ctrlKey)
-            n.is_fold = !n.is_fold;
-        else
-            setDOI(nodes, n);
+        if (selectedNode != n.id)
+            selectedNode = null;
+        setDOI(nodes, n);
         update(nodes);
-        // if (d.children) {
-        //     collapse(d);
-        // } else {
-        //     d.children = d._children;
-        //     d._children = null;
-        // }
-        // computeDOI(d);
     }
 
     function contextmenu(n) {
         n.is_manual_focus = !n.is_manual_focus;
-        // console.log(n);
         d3.event.preventDefault();
         update(nodes);
     }
 
     function dblclick(n) {
+        // n.is_fold = !n.is_fold
+        if (selectedNode == n.id)
+            selectedNode = null;
+        else
+            selectedNode = n.id;
+        update(nodes);
     }
 
     function brushStart() {
@@ -842,43 +713,4 @@ function spaceTree(nodes, {
         }
         update(nodes);
     }
-    
-
-    // // Collapse nodes according to DOI
-    // function collapseDOI(d, doiThreshold) {
-    //     // first restore children then collapse
-    //     if (!d.children && d._children) {
-    //         d.children = d._children;
-    //         d._children = null;
-    //     }
-
-    //     if (d.children) {
-    //         d.children.forEach(n => collapseDOI(n, doiThreshold));
-    //         if(d.doi < doiThreshold) {
-    //             collapse(d);
-    //         }
-    //     } 
-        
-    //     // if (d.children && d.doi < doiThreshold) {
-    //     //     d._children = d.children;
-    //     //     d._children.forEach(d => collapseDOI(d, doiThreshold));
-    //     //     d.children = null;
-    //     // }
-    //     // else if(d.doi >= doiThreshold && d.children === null)
-    //     // {
-    //     //     if()
-    //     //     d.children = d._children;
-    //     //     d.children.forEach(d => collapseDOI(d, doiThreshold));
-    //     //     d._children = null;
-    //     // }
-    // }
-
-    // Collapse nodes
-    // function collapse(d) {
-    //     if (d.children) {
-    //         d._children = d.children;
-    //         d._children.forEach(collapse);
-    //         d.children = null;
-    //     }
-    // }
 }
