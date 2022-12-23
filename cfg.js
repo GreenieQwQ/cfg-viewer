@@ -45,8 +45,8 @@ function getMedianFocus(nodes, node) {
     while(queue.length > 0) {
         const head = nodes[queue.pop()];
         // console.log("head:", head);
-        if(head.id == node.id)
-            break;
+        // if(head.id == node.id)
+        //     break;
         head.children.forEach(childID => {
             if(childID == node.id) {
                 result.add(head.id);    
@@ -670,6 +670,7 @@ function spaceTree(nodes, {
     function contextmenu(n) {
         n.is_manual_focus = !n.is_manual_focus;
         d3.event.preventDefault();
+        console.log(n);
         update(nodes);
     }
 
