@@ -27,10 +27,10 @@ const TEXT_PADDING = {
 
 const NODE_COLOR = {
     NORMAL: "#fff",
-    MOST_FOCUS: "#FFB14E",
-    MEDIEAN_FOCUS: "#FFD700",
+    MOST_FOCUS: `hsl(200, 83%, 83%)`, //"#FFB14E",
+    MEDIEAN_FOCUS: `hsl(200, 95%, 95%)`, // "#FFD700",
     FOLD: `hsl(100, 100%, 90%)`,
-    MERGE: `hsl(200, 100%, 90%)`,
+    MERGE: `hsl(130, 90%, 90%)`,
     FOLD_AND_MERGE: `hsl(360, 100%, 90%)`
 }
 
@@ -258,6 +258,7 @@ var clearFocus = null;
 var allFocus = null;
 var textUpdate = null;
 var selectedNode = null;
+var timeout = null;
 
 
 /* Main */
@@ -273,8 +274,13 @@ function spaceTree(nodes, {
 {
     // 设置按钮触发函数
     clearFocus = () => {
-        nodes.forEach(node => node.doi_type = DOI_TYPE.LITTLE_CARE);
-        nodes.forEach(node => node.is_manual_focus = false);
+        nodes.forEach(node => {
+            node.doi_type = DOI_TYPE.LITTLE_CARE;
+            node.is_manual_focus = false;
+            if (node.container.length != 0)
+                untieNodes(nodes, node.id);
+        });
+        selectedNode = null;
         update(nodes);
     };
     allFocus = () => {
@@ -489,7 +495,6 @@ function spaceTree(nodes, {
             .attr("x1", n => n.x - n.size[0] / 2)
             .attr("y1", n => {
                 let startY = n.y - n.size[1] / 2;
-                // let head_lines = getHeadlineCount(nodes, n);
                 let head_lines = n.text[0].length;
                 return startY + TEXT_PADDING.HEAD_TOP + head_lines * TEXT_PADDING.HEAD_HEIGHT + TEXT_PADDING.HEAD_BOTTOM;
             })
@@ -498,7 +503,6 @@ function spaceTree(nodes, {
             })
             .attr("y2", n => {
                 let startY = n.y - n.size[1] / 2;
-                // let head_lines = getHeadlineCount(nodes, n);
                 let head_lines = n.text[0].length;
                 return startY + TEXT_PADDING.HEAD_TOP + head_lines * TEXT_PADDING.HEAD_HEIGHT + TEXT_PADDING.HEAD_BOTTOM
             })
@@ -582,24 +586,10 @@ function spaceTree(nodes, {
             .selectAll("path.link")
             .data(edges, d => d.source + "," +  d.target);
 
-        // link.append('marker')
-        // .attr('id', 'arrow')
-        // .attr('viewBox', '0 -10 15 15')
-        // .attr('refX', 15)
-        // .attr('refY', 0)
-        // .attr('markerWidth', 15)
-        // .attr('markerHeight', 15)
-        // .attr('markerUnits', 'userSpaceOnUse') // disable the effect of stroke width on the arrow
-        // .attr('orient', 'auto');
-            // Add new links at source's old pos
+        // Add new links at source's old pos
         link.enter().insert("path", "g")
             .attr("class", "link");
 
-            // .attr('marker-end', 'url(#arrow)')
-            // .attr("d", d => {
-            //     let o = {x: d.source.x0 ? d.source.x0 : 0, y: d.source.y0  ? d.source.y0 + d.source.size[1] : 0};
-            //     return diagonal({source: o, target: o});
-            // });
         
         // Set links to their new pos.
         let line = d3.svg.line()
@@ -626,18 +616,27 @@ function spaceTree(nodes, {
         /* ===== TextArea =====
         */
         let node = nodes[selectedNode == null ? 0 : selectedNode];
-        
+
         let textboard = d3.select(".textboard")
             .style("top", (node.y - node.size[1] / 2 + 30) + "px")
             .style("left", (node.x + node.size[0] / 2 + 9) + "px")
             .style("visibility", selectedNode == null ? "hidden" : "visible");
+
+        textboard.select("textarea")
+            .attr("cols", 1)
+            .attr("rows", node.size[1] / 15)
+            .style("visibility", "hidden");
+
+        let textboardUpdate = textboard.transition()
+            .duration(duration)
+            .style("visibility", selectedNode == null ? "hidden" : "visible");
         
-        let textarea = textboard.select("textarea")
+        let textareaUpdate = textboardUpdate.select("textarea")
             .attr("cols", node.size[0] / 8)
             .attr("rows", node.size[1] / 15)
             .style("visibility", selectedNode == null ? "hidden" : "visible");
 
-        textarea.node().value = node.note;
+        textareaUpdate.node().value = node.note;
 
         /*
         /* ===== Post processing =====
@@ -653,10 +652,18 @@ function spaceTree(nodes, {
     /* Event Handler */
 
     // collapse/unfold one layer on click, and compute doi then update.
+
     function click(n) {
-        if (selectedNode != n.id)
-            selectedNode = null;
-        setDOI(nodes, n);
+        if (d3.event.ctrlKey) {
+            if (selectedNode == n.id)
+                selectedNode = null;
+            else
+                selectedNode = n.id;
+        } else {
+            if (selectedNode != n.id)
+                selectedNode = null;
+                setDOI(nodes, n);
+        }
         update(nodes);
     }
 
@@ -668,11 +675,7 @@ function spaceTree(nodes, {
 
     function dblclick(n) {
         // n.is_fold = !n.is_fold
-        if (selectedNode == n.id)
-            selectedNode = null;
-        else
-            selectedNode = n.id;
-        update(nodes);
+        // update(nodes);
     }
 
     function brushStart() {

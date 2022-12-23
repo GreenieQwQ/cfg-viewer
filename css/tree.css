@@ -27,7 +27,8 @@
 }
 
 .node line {
-	stroke: hsla(0, 100%, 0%, 0.2);
+	stroke: hsl(15, 70%, 70%);
+	/* stroke: hsla(0, 100%, 0%, 0.2); */
 	stroke-width: 1;
 	stroke-dasharray: 5;
 }
@@ -44,8 +45,6 @@
 
 .textboard {
 	position: absolute;
-	/* top: 100px;
-	left: 200px; */
 	width: 100%;
 	height: 100%;
 }
