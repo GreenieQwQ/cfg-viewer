@@ -34,12 +34,12 @@ d3.json('data/nodes.json', d => {
         node.note = "";
     });
 
-    spaceTree(d);
+    cfgviewer(d);
 });
 
 
 /* Main */
-function spaceTree(nodes) {
+function cfgviewer(nodes) {
     /* Btn or Textarea Update Function */
     // 清零按钮触发函数
     clearFocus = () => {

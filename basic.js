@@ -66,7 +66,7 @@ function getNodeText(nodes, node) {
     }
     getContainerHead(node);
     // 计算content
-    let getAsmString = a => a.addr + a.mnemonic + a.operands;
+    let getAsmString = a => a.addr + " " + a.mnemonic + " " + a.operands;
     let content = [];
     // d.container.length == 0代表不为merge节点
     if (node.container.length == 0) {
