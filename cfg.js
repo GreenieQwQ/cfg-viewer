@@ -274,10 +274,12 @@ function spaceTree(nodes, {
     // 设置按钮触发函数
     clearFocus = () => {
         nodes.forEach(node => node.doi_type = DOI_TYPE.LITTLE_CARE);
+        nodes.forEach(node => node.is_manual_focus = false);
         update(nodes);
     };
     allFocus = () => {
-        nodes.forEach(node => node.doi_type = DOI_TYPE.MOST_CARE);
+        // nodes.forEach(node => node.doi_type = DOI_TYPE.MOST_CARE);
+        nodes.forEach(node => node.is_manual_focus = true);
         update(nodes);
     };
 
