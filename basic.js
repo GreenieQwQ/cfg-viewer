@@ -99,7 +99,7 @@ function getNodeText(nodes, node) {
             });
         } else {
             head[0].content = head[0].content + " <F>";
-            // 不关心节点——仅显示head
+             // 不关心节点——仅显示节点名 + 标记已折叠
             // if(node.content.asm.length > 0)
             //     content.push({id: node.id, content: "..."});
         }

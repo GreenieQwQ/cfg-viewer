@@ -395,16 +395,6 @@ function update(nodes) {
         .style("visibility", selectedNode == null ? "hidden" : "visible");
 
     textareaUpdate.node().value = node.note;
-
-    /*
-    /* ===== Post processing =====
-    */
-
-    // Record the old positions.
-    nodes.forEach(d => {
-        d.x0 = d.x;
-        d.y0 = d.y;
-    });
 }
 
 /* Event Handler */
@@ -417,7 +407,7 @@ function click(n) {
     } else {
         if (selectedNode != n.id)
             selectedNode = null;
-            setDOI(nodes, n);
+        setDOI(nodes, n);
     }
     update(nodes);
 }
